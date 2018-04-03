@@ -285,6 +285,7 @@ function generateExcelFiles($bupoCoursesArray, $coursesIdNumeroArray, $filePathP
 
     if($GLOBALS['send_email']){
         $GLOBALS['email']->send();
+        echo "Email sent...\n";
     }
 }
 

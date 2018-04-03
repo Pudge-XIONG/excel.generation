@@ -1,11 +1,4 @@
 .DS_Store
-.gitignore
 .vscode/launch.json
-excels/recap_2018_03_COS Axe Sud-Est ADC.xlsx
-excels/recap_2018_03_COP TER Languedoc Roussillon.xlsx
-excels/recap_2018_03_COP TER Toulouse.xlsx
-excels/recap_2018_03_ECT Toulouse.xlsx
-excels/recap_2018_03_ESV Nîmes TER.xlsx
-excels/recap_2018_03_UP TER Languedoc Roussillon.xlsx
-excels/recap_2018_03_UPT Toulouse.xlsx
+excels/
 resources/config.ini
