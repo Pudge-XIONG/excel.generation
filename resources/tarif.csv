@@ -1,25 +1,54 @@
-﻿Depart;Arrivée;Prix jour;Prix Nuit
-Narbonne depot ;Narbonne gare;6,36;7,63
-Narbonne depot ;Narbonne Hotel;6,36;7,63
-Narbonne depot ;Beziers Gare;37,00;44,00
-Narbonne depot ;Carcassonne;75,00;90,00
-Narbonne depot ;Cerbere;144,00;173,00
-Narbonne depot ;Avignon;230,00;276,00
-Narbonne depot ;Marseille;325,00;390,00
-Narbonne depot ;Sete;105,00;126,00
-Narbonne depot ;Toulouse;193,00;231,00
-Narbonne depot ;Villefranche;141,00;169,00
-Narbonne depot ;St Jory;211,00;254,00
-Narbonne depot ;Perpignan Gare;80,00;96,00
-Narbonne depot ;Perpignan Depot;81,00;98,00
-Narbonne Gare ;Narbonne Depot;6,36;7,63
-Narbonne Gare ;Narbonne Hotel;6,36;7,63
-Narbonne Gare ;Beziers Gare;37,00;44,00
-Narbonne Gare ;Carcassonne;75,00;90,00
-Narbonne Gare ;Cerbere;144,00;173,00
-Narbonne Gare ;Perpignan Gare;80,00;96,00
-Narbonne Gare ;Perpignan Depot;81,00;98,00
-Narbonne Gare ;Toulouse;193,00;231,00
-Narbonne Gare ;Castelnaudary;123,00;148,00
-Narbonne Gare ;Montpellier ;122,00;147,00
-Narbonne Gare ;Nimes ;182,00;218,00
+﻿Code Depart;Depart libelleLocalite;Depart libelleGM;Depart ville;Code Arrivee;Arrivee libelleLocatlite;Arrivee libelleGM;Arrivee ville;prix jour ;prix nuit 
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;TE.DP;Toulouse-Matabiau ;Dépôt;Toulouse;193;231
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;6,36;7,63
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;PPN.BV;Perpignan;Bâtiment Voyageurs;Perpignan;80;96
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;CCE.BV;Carcassonne ;Bâtiment Voyageurs;CARCASSONNE;75;90
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;NA.HO;Narbonne ;HOTEL DU MIDI;Narbonne;6,36;7,63
+NA.HO;Narbonne ;HOTEL DU MIDI;Narbonne;NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;6,36;7,63
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;NI.BV;Nîmes;Bâtiment Voyageurs;Nîmes;182;218
+NA.BV;Narbonne ;UP TER;Narbonne;PPN.DP;Perpignan;Dépôt/Base Tvx;Perpignan;81;98
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;NA.DP;Narbonne;Narbonne Dépôt;Narbonne;6,36;7,63
+NA.BV;Narbonne ;UP TER;Narbonne;MPL.BV;Montpellier-St-Roch;Bâtiment Voyageurs;Montpellier;122;147
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;BS.BV;Béziers;Bâtiment Voyageurs;Béziers;37;44
+NA.BV;Narbonne ;UP TER;Narbonne;BS.BV;Béziers;Bâtiment Voyageurs;Béziers;37;44
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;MPL.BV;Montpellier-St-Roch ;Dépose Taxis Niveau Supérieur;MONTPELLIER;122;147
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;CE.BV;Cerbère;Bâtiment Voyageurs;Cerbère;144;173
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;CCE.00;Carcassonne;A déterminer;Carcassonne;75;90
+NA.BV;Narbonne ;UP TER;Narbonne;TE.BV;Toulouse-Matabiau;Bâtiment Voyageurs;Toulouse;193;231
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;TE.DP;Toulouse-Matabiau ;Dépôt;Toulouse;193;231
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;CCE.00;Carcassonne ;non utilisé;CARCASSONNE;75;90
+NA.HO;Narbonne ;HOTEL DU MIDI;Narbonne;TE.BV;Toulouse-Matabiau;Bâtiment Voyageurs;Toulouse;193;231
+.;;;NARBONNE;NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;6,36;7,63
+.;;;NARBONNE;TE.BV;Toulouse-Matabiau;Bâtiment Voyageurs;Toulouse;193;231
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;BS.HO;Béziers ;HOTEL IMPERATOR;Béziers;;
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;MAU.BV;Millau;Bâtiment Voyageurs;Millau;;
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;.;;;MONTPELLIER;;
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;MAU.00;Millau;BV;Millau;;
+NA.HO;Narbonne ;HOTEL DU MIDI;Narbonne;NAA.BV;Nogent-l'Artaud-Charly;Bâtiment Voyageurs;Nogent-l'Artaud;;
+NA.HO;Narbonne ;HOTEL DU MIDI;Narbonne;CCE.BV;Carcassonne ;Bâtiment Voyageurs;CARCASSONNE;75;90
+.;;;NARBONNE;TE.00;Toulouse-Matabiau ;Bâtiment Voyageurs;Toulouse;193;231
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;CE.BV;Cerbère;Bâtiment Voyageurs;Cerbère;144;173
+TE.BV;Toulouse-Matabiau;Bâtiment Voyageurs;Toulouse;FGV.BV;Figueras;Bâtiment Voyageurs;Figueres;;
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;PPN.BV;Perpignan;Bâtiment Voyageurs;Perpignan;80;96
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;PPN.RV;Perpignan;Remisage Voy;Perpignan;80;96
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;CCE.BV;Carcassonne ;Bâtiment Voyageurs;CARCASSONNE;75;90
+BS.BV;Béziers;Bâtiment Voyageurs;Béziers;NA.HO;Narbonne ;HOTEL DU MIDI;Narbonne;6,36;7,63
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;MSC.BV;Marseille-St-Charles;Bâtiment Voyageurs-coté IBIS;Marseille;325;390
+NA.BV;Narbonne ;UP TER;Narbonne;MPL.AR;Montpellier-St-Roch;Arènes;Montpellier;122;147
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;PPN.DP;Perpignan;Dépôt/Base Tvx;Perpignan;81;98
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;6,36;7,63
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;CCE.HO;Carcassonne ;HOTEL TERMINUS HOTEL DU SOLEIL;Carcassonne;75;90
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;STE.BV;Sète;Bâtiment Voyageurs;Sète;105;126
+CE.BV;Cerbère;Bâtiment Voyageurs;Cerbère;NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;144;173
+NAD.00;Narbonne Dépôt;Narbonne dépôt;Narbonne;AV.BV;Avignon;Bâtiment Voyageurs;AVIGNON Cedex;230;276
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;NI.DP;Nîmes;Dépôt;Nîmes;182;218
+NA.HO;Narbonne ;Hôtel IBIS;Narbonne;NA.DP;Narbonne;Narbonne Dépôt;Narbonne;6,36;7,63
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;NA.HO;Narbonne ;Hôtel IBIS;Narbonne;6,36;7,63
+NA.BV;Narbonne ;UP TER;Narbonne;AV.BV;Avignon;Bâtiment Voyageurs;AVIGNON Cedex;230;276
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;VVB.00;Villefranche-Vernet-les-Bains;BV;Villefranche-de-Conflent;;
+NA.DP;Narbonne;Narbonne Dépôt;Narbonne;PPN.AC;Perpignan;Ac Dépôt/Base T;Perpignan;81;98
+NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;PLN.BV;Port-la-Nouvelle;Bâtiment Voyageurs;Port-la-Nouvelle;;
+NA.HO;Narbonne ;Hôtel IBIS;Narbonne;BS.BV;Béziers;Bâtiment Voyageurs;Béziers;37;44
+PLN.BV;Port-la-Nouvelle;Bâtiment Voyageurs;Port-la-Nouvelle;NA.BV;Narbonne;Bâtiment Voyageurs (GARE);Narbonne;;
+NA.HO;Narbonne ;HOTEL DU MIDI;Narbonne;PPN.BV;Perpignan;Bâtiment Voyageurs;Perpignan;80;96
+NA.HO;Narbonne ;HOTEL DU MIDI;Narbonne;MPL.BV;Montpellier-St-Roch;Bâtiment Voyageurs;Montpellier;122;147

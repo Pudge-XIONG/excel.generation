@@ -11,18 +11,28 @@
 
 require 'vendor/autoload.php';
 
+// Import PHPMailer classes into the global namespace
+// These must be at the top of your script, not inside a function
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 // firstly, read parameter from command line,
 analyse_parameters($argc, $argv);
+
+// set the request month and year to the current date
 $year = date("Y");
 $month = date("m");
 
-if($argc == 3){
+// if the specified month and year are given, then replace the current date by it
+if ($argc == 3) {
     $year = $argv[1];
     $month = $argv[2];
 }
+
+$GLOBALS['year'] = $year;
+$GLOBALS['month'] = $month;
 
 // Parse config file
 echo "loading configuration file...\n";
@@ -38,16 +48,82 @@ $excel_file_prefix = $config_array['excel_file_prefix'];
 $headers = array('Content-Type:application/vnd.sncf.galapagos+json; version=1');
 $getcommands_url = $webservice_endpoint.$commandes_resource."/".$year."/".$month;
 $getcourses_url = $webservice_endpoint.$courses_resource."/".$year."/".$month;
+$GLOBALS['send_email'] = $config_array['send_email'];
+$GLOBALS['smtp_host'] = $config_array['smtp_host'];
+$GLOBALS['smtp_port'] = $config_array['smtp_port'];
+$GLOBALS['smtp_auth_enable'] = $config_array['smtp_auth_enable'];
+$GLOBALS['smtp_host_username'] = $config_array['smtp_host_username'];
+$GLOBALS['smtp_host_pwd'] = $config_array['smtp_host_pwd'];
+$GLOBALS['smtp_secure_mode'] = $config_array['smtp_secure_mode'];
+$GLOBALS['mail_from_address'] = $config_array['mail_from_address'];
+$GLOBALS['mail_from_name'] = $config_array['mail_from_name'];
+$GLOBALS['mail_to'] = $config_array['mail_to'];
+
 echo "done!\n\n";
 
-echo "now try to call $getcommands_url web service\n";
+if($GLOBALS['send_email']){
+    $GLOBALS['email'] = prepareEmail();
+}
+
+echo "loading tarif file...\n";
+$GLOBALS['tarifCSV'] = array_map('str_getcsv_with_semicolon', file($tarif_path));
+$GLOBALS['tarifArray'] = array();
+foreach($GLOBALS['tarifCSV'] as $tarifCSVLine){
+    $tarifArrayLine = array();
+    //$tarifArrayLine['Depart'] = $tarifCSVLine[0];
+    $tarifArrayLine['Code Depart'] = $tarifCSVLine[0];
+    //$tarifArrayLine['Arrivée'] = $tarifCSVLine[2];
+    $tarifArrayLine['Code Arrivée'] = $tarifCSVLine[4];
+    $tarifArrayLine['Prix jour'] = $tarifCSVLine[8];
+    $tarifArrayLine['Prix Nuit'] = $tarifCSVLine[9];
+    array_push($GLOBALS['tarifArray'], $tarifArrayLine);   
+}
+
+//var_dump($GLOBALS['tarifArray']);
+//exit;
+echo "done!\n\n";
+
+
+/*
+/////////////this part is just for generating a completed tarif csv file////////////////////
+$locationCSV = array();
+$fileString = "Code Depart;Depart libelleLocalite;Depart libelleGM;Depart ville;Code Arrivee;Arrivee libelleLocatlite;Arrivee libelleGM;Arrivee ville\n"; 
+//$locationCSV['header'] = "";
+
+for($i = 1; $i<=12; $i++){
+    $getCourseUrl = $webservice_endpoint.$courses_resource."/".$year."/".$i;
+    echo "calling web service $getCourseUrl ...\n";
+    $coursesBody = callWebAPI('GET', $getCourseUrl, $webservice_login, $webservice_pwd, $headers);
+    $coursesJson = json_decode($coursesBody, true);
+    echo "done!\n\n";
+    if($coursesJson != null && count($coursesJson)  > 0){
+        foreach($coursesJson as $courseJson){
+            
+            $lieuDepart = $courseJson['lieuDepart'];
+            $lieuArrivee = $courseJson['lieuArrivee'];
+            if(!array_key_exists($lieuDepart['codeGare'].'.'.$lieuDepart['codeChantier'].$lieuArrivee['codeGare'].'.'.$lieuArrivee['codeChantier'], $locationCSV)){
+                $locationCSV[$lieuDepart['codeGare'].'.'.$lieuDepart['codeChantier'].$lieuArrivee['codeGare'].'.'.$lieuArrivee['codeChantier']] = $lieuDepart['codeGare'].'.'.$lieuDepart['codeChantier'].';'.$lieuDepart['libelleLocalite'].';'.$lieuDepart['libelleGM'].";".$lieuDepart['ville'].";".$lieuArrivee['codeGare'].'.'.$lieuArrivee['codeChantier'].';'.$lieuArrivee['libelleLocalite'].';'.$lieuArrivee['libelleGM'].';'.$lieuArrivee['ville'];
+                $fileString = $fileString.$lieuDepart['codeGare'].'.'.$lieuDepart['codeChantier'].';'.$lieuDepart['libelleLocalite'].';'.$lieuDepart['libelleGM'].";".$lieuDepart['ville'].";".$lieuArrivee['codeGare'].'.'.$lieuArrivee['codeChantier'].';'.$lieuArrivee['libelleLocalite'].';'.$lieuArrivee['libelleGM'].';'.$lieuArrivee['ville']."\n";
+            }
+            //var_dump($courseJson);
+        }
+    }
+}
+
+file_put_contents('code.csv', $fileString);
+
+exit;
+////////////////////////////////////////////////////////////////////////////////////////////
+*/
+
+echo "calling web service $getcommands_url ...\n";
 // get commands as json object
 $commandsBody = callWebAPI('GET', $getcommands_url, $webservice_login, $webservice_pwd, $headers);
 $commandsJson = json_decode($commandsBody, true);
+echo "done!\n\n";
 
 // get all courses's id and numero 
 $coursesIdNumeroArray = getCourseIdNumeroArray($commandsJson);
-
 
 // get courses as json object
 echo "calling web service $getcourses_url ...\n";
@@ -59,32 +135,10 @@ echo "done!\n\n";
 $bupoCoursesArray = array();
 sortCourseByBUPO($bupoCoursesArray, $coursesJson);
 
-// load tarif
-echo "loading tarif file...\n";
-$tarifCSV = array_map('str_getcsv_with_semicolon', file($tarif_path));
-echo "done!\n\n";
-
-/*
-/////////////this part is just for generating a completed tarif csv file////////////////////
-foreach($coursesJson as $courseJson){
-    $lieuDepart = $courseJson['lieuDepart'];
-    $lieuArrivee = $courseJson['lieuArrivee'];
-    echo $lieuDepart['codeGare'].';'.$lieuDepart['codeChantier'].';'.$lieuDepart['libelleLocalite'].';'.$lieuDepart['libelleGM'];
-    echo "--->";
-    echo $lieuArrivee['codeGare'].';'.$lieuArrivee['codeChantier'].';'.$lieuArrivee['libelleLocalite'].';'.$lieuArrivee['libelleGM'];
-
-    echo "\n";
-}
-*/
-
-////////////////////////////////////////////////////////////////////////////////////////////
-
 // we begin to generate excel file from this part
 echo "generating excel files\n";
 
 $filePathPrefix = $excel_folder.DIRECTORY_SEPARATOR.$excel_file_prefix.$year."_".$month;
-
-var_dump($bupoCoursesArray);
 
 generateExcelFiles($bupoCoursesArray, $coursesIdNumeroArray, $filePathPrefix);
 
@@ -224,6 +278,13 @@ function generateExcelFiles($bupoCoursesArray, $coursesIdNumeroArray, $filePathP
     foreach($bupoCoursesArray as $BUPO => $bupoCourses){
         $filePath = $filePathPrefix."_".$BUPO.".xlsx";
         generateExcel($BUPO, $bupoCourses, $coursesIdNumeroArray, $filePath);
+        if($GLOBALS['send_email']){
+            $GLOBALS['email']->addAttachment($filePath);         // Add attachments
+        }
+    }
+
+    if($GLOBALS['send_email']){
+        $GLOBALS['email']->send();
     }
 }
 
@@ -235,13 +296,19 @@ function generateExcel($BUPO, $coursesJson, $coursesIdNumeroArray, $filePath){
     
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
-    $sheet->setCellValue('A1', 'Numéro')->setCellValue('B1', 'Date')
-            ->setCellValue('C1', 'Départ')->setCellValue('D1', 'Gare')
-            ->setCellValue('E1', 'Heure')->setCellValue('F1', 'Arrivée')
-            ->setCellValue('G1', 'Gare')->setCellValue('H1', 'BUPO')
-            ->setCellValue('I1', 'N° Bon')->setCellValue('J1', 'Attente')
-            ->setCellValue('K1', 'Commentaires sur la course')->setCellValue('L1', 'Tarif HT');
+    $sheet->setCellValue('A1', 'Date')->setCellValue('B1', 'Départ')
+            ->setCellValue('C1', 'Gare')->setCellValue('D1', 'Heure')
+            ->setCellValue('E1', 'Arrivée')->setCellValue('F1', 'Gare')
+            ->setCellValue('G1', 'BUPO')->setCellValue('H1', 'N° Bon')
+            ->setCellValue('I1', 'Attente')->setCellValue('J1', 'Commentaires sur la course')
+            ->setCellValue('K1', 'Tarif HT');
     $number = 1;
+
+    // sort courses by date
+    usort($coursesJson, function ($item1, $item2) {
+        return $item1['dateRealisation']."-".$item1['heureDepart'] <=> $item2['dateRealisation']."-".$item2['heureDepart'];
+    });
+
     foreach($coursesJson as $courseJson){
         $numero = $number ++;
         $dateStr = $courseJson['dateRealisation'];
@@ -249,23 +316,52 @@ function generateExcel($BUPO, $coursesJson, $coursesIdNumeroArray, $filePath){
         $date = date("d/m/Y", strtotime($dateStr));
         $lieuDepart = $courseJson['lieuDepart'];
         $lieuArrivee = $courseJson['lieuArrivee'];
-        $depart = $lieuDepart['libelleLocalite'];
-        $gareDepart = $lieuDepart['libelleGM'];
+
+        // sometimes courses in response do not contain 'libelleLocalite' and 'libelleGM'
+        // so we just set 'ville' as their value
+        $depart = "";
+        if (array_key_exists("libelleLocalite", $lieuDepart)) {
+            $depart = $lieuDepart['libelleLocalite'];
+        } else{
+            $depart = $lieuDepart['ville'];
+        }
+        $gareDepart = "";
+        if (array_key_exists("libelleGM", $lieuDepart)) {
+            $gareDepart = $lieuDepart['libelleGM'];    
+        }
+
         $heureStr = $courseJson['heureDepart'];
         // change time string format from hhmm to hh:mm
         $heure = substr_replace($heureStr, ':', 2, 0);
-        $arrivee = $lieuArrivee['libelleLocalite'];
-        $gareArrivee = $lieuArrivee['libelleGM'];
+
+        $arrivee = "";
+        if (array_key_exists("libelleLocalite", $lieuArrivee)) {
+            $arrivee = $lieuArrivee['libelleLocalite'];
+        } else{
+            $arrivee = $lieuArrivee['ville'];
+        }
+        $gareArrivee = "";
+        if (array_key_exists("libelleGM", $lieuArrivee)) {
+            $gareArrivee = $lieuArrivee['libelleGM'];    
+        }
         $numeroDeBon = $coursesIdNumeroArray[$courseJson['id']];
 
-        $tarifHT = 0;
+        $dateRealisation = $courseJson['dateRealisation'];
+        
+        $dtime = DateTime::createFromFormat("Y-m-d", $dateRealisation);
+        
+        $timestamp = $dtime->getTimestamp();
+        $tarifHT = getTarif($lieuDepart, $lieuArrivee, $timestamp, $heure);
 
-        $sheet->setCellValue('A'.$number, $numero)->setCellValue('B'.$number, $date)
-            ->setCellValue('C'.$number, $depart)->setCellValue('D'.$number, $gareDepart)
-            ->setCellValue('E'.$number, $heure)->setCellValue('F'.$number, $arrivee)
-            ->setCellValue('G'.$number, $gareArrivee)->setCellValue('H'.$number, $BUPO)
-            ->setCellValue('I'.$number, $numeroDeBon)->setCellValue('L'.$number, $tarifHT);
+        $sheet->setCellValue('A'.$number, $date)->setCellValue('B'.$number, $depart)
+            ->setCellValue('C'.$number, $gareDepart)->setCellValue('D'.$number, $heure)
+            ->setCellValue('E'.$number, $arrivee)->setCellValue('F'.$number, $gareArrivee)
+            ->setCellValue('G'.$number, $BUPO)->setCellValue('H'.$number, $numeroDeBon)
+            ->setCellValue('K'.$number, $tarifHT);
     }
+
+    // set the formula for calculating the total price
+    $sheet->setCellValue('K'.($number + 1), "=SUM(K2:K".$number.")");
 
     $writer = new Xlsx($spreadsheet);
     $writer->save($filePath);
@@ -273,5 +369,146 @@ function generateExcel($BUPO, $coursesJson, $coursesIdNumeroArray, $filePath){
 }
 
 
+
+/**
+ * This funciton try to find the corresponding price of the course by the given depart and arrival
+ * 
+ * The price of day and night and holidays is different, so we need to check if we need to get the 
+ * normal price or not
+ */
+function getTarif($lieuDepart, $lieuArrivee, $timestamp, $heure){
+    // load tarif
+    $courseTarif = 0.0;
+    $tarifArray = $GLOBALS['tarifArray'];
+
+    $departCode = $lieuDepart['ville'];
+    if(array_key_exists("codeGare", $lieuDepart)||array_key_exists("codeChantier", $lieuDepart)){
+        $departCode = $lieuDepart['codeGare'].".".$lieuDepart['codeChantier'];
+    }
+    $arriveeCode = $lieuArrivee['ville'];
+    if(array_key_exists("codeGare", $lieuArrivee)||array_key_exists("codeChantier", $lieuArrivee)){
+        $arriveeCode = $lieuArrivee['codeGare'].".".$lieuArrivee['codeChantier'];
+    }
+
+    foreach($tarifArray as $tarifLine){
+        if (strcasecmp($departCode, $tarifLine['Code Depart']) == 0
+            && strcasecmp($arriveeCode, $tarifLine['Code Arrivée']) == 0){
+
+            $dt = DateTime::createFromFormat("H:i", $heure);
+            $hours = $dt->format('H');
+            if($hours >= 19 || $hours < 7 || isHoliday($timestamp)){
+                // 19h -- 7h ou holiday
+                $courseTarif = $tarifLine['Prix Nuit'];
+            } else{
+                $courseTarif = $tarifLine['Prix jour'];
+            }
+            
+        }
+    }
+
+    $courseTarif = str_replace(',', '.', $courseTarif);
+    return floatval($courseTarif);
+}
+
+
+/**
+ * This function check if the given date is a holiday (weekends included)
+ */
+function isHoliday($timestamp)
+{
+        $iDayNum = strftime('%u', $timestamp);
+        $iYear = strftime('%Y', $timestamp);
+
+        $aHolidays = getHolidays($iYear);
+
+        /*
+        * On est oblige de convertir les timestamps en string a cause des decalages horaires.
+        */
+        $aHolidaysString = array_map(function ($value)
+        {
+                return strftime('%Y-%m-%d', $value);
+        }, $aHolidays);
+
+        if (in_array(strftime('%Y-%m-%d', $timestamp), $aHolidaysString) OR $iDayNum == 6 OR $iDayNum == 7)
+        {
+                return true;
+        }
+
+        return false;
+}
+
+
+/**
+ * This funciton retrun a list of holidays (weekends included)
+ */
+function getHolidays($year = null)
+{
+        if ($year === null)
+        {
+                $year = intval(strftime('%Y'));
+        }
+
+        $easterDate = easter_date($year);
+        $easterDay = date('j', $easterDate);
+        $easterMonth = date('n', $easterDate);
+        $easterYear = date('Y', $easterDate);
+
+        $holidays = array(
+                // Jours feries fixes
+                mktime(0, 0, 0, 1, 1, $year),// 1er janvier
+                mktime(0, 0, 0, 5, 1, $year),// Fete du travail
+                mktime(0, 0, 0, 5, 8, $year),// Victoire des allies
+                mktime(0, 0, 0, 7, 14, $year),// Fete nationale
+                mktime(0, 0, 0, 8, 15, $year),// Assomption
+                mktime(0, 0, 0, 11, 1, $year),// Toussaint
+                mktime(0, 0, 0, 11, 11, $year),// Armistice
+                mktime(0, 0, 0, 12, 25, $year),// Noel
+
+                // Jour feries qui dependent de paques
+                mktime(0, 0, 0, $easterMonth, $easterDay + 1, $easterYear),// Lundi de paques
+                mktime(0, 0, 0, $easterMonth, $easterDay + 39, $easterYear),// Ascension
+                mktime(0, 0, 0, $easterMonth, $easterDay + 50, $easterYear), // Pentecote
+        );
+
+        sort($holidays);
+
+        return $holidays;
+}
+
+
+/**
+ * This function prepare the mail object for sending generated files to destinations
+ */
+function prepareEmail(){
+    //Server settings
+    $mail = new PHPMailer(true);                          // Passing `true` enables exceptions
+    $mail->SMTPDebug = 2;                                 // Enable verbose debug output
+    //$mail->isSMTP();                                      // Set mailer to use SMTP
+    //$mail->Host = $GLOBALS['smtp_host'];  // Specify main and backup SMTP servers
+    //$mail->SMTPAuth = $GLOBALS['smtp_auth_enable'];       // Enable SMTP authentication
+    //$mail->Username = $GLOBALS['smtp_host_username'];     // SMTP username
+    //$mail->Password = $GLOBALS['smtp_host_pwd'];          // SMTP password
+    //$mail->SMTPSecure = $GLOBALS['smtp_secure_mode'];     // Enable TLS encryption, `ssl` also accepted
+    //$mail->Port = $GLOBALS['smtp_port'];                  // TCP port to connect to
+
+    //Recipients
+    $mail->setFrom($GLOBALS['mail_from_address'], $GLOBALS['mail_from_name']);
+
+    $recipientsArray = explode(';', $GLOBALS['mail_to']);
+    foreach($recipientsArray as $recipient){
+        $mail->addAddress($recipient);     // Add a recipient
+    }
+    //$mail->addReplyTo('info@example.com', 'Information');
+    //$mail->addCC('cc@example.com');
+    //$mail->addBCC('bcc@example.com');
+
+    //Content
+    $mail->isHTML(true);                                  // Set email format to HTML
+    $mail->Subject = 'Recap de '.$GLOBALS['month'].'/'.$GLOBALS['year'];
+    $mail->Body    = 'Voici les fichiers excel de '.$GLOBALS['month'].'/'.$GLOBALS['year']." ci-joint dans ce mail.\n";
+    //$mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
+
+    return $mail;
+}
 
 ?>
