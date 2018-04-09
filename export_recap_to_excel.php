@@ -247,7 +247,10 @@ function sortCourseByBUPO(&$bupoCoursesArray, $coursesJson){
             $bupoCoursesArray[$BUPO] = $bupoCourses;
         }
         
-        $bupoCoursesArray[$BUPO][$courseJson['id']] = $courseJson;
+        // si l'etat de course est CONFIRMEE, on l'export.
+        if (strcasecmp('CONFIRMEE', $courseJson['etat']) == 0){
+            $bupoCoursesArray[$BUPO][$courseJson['id']] = $courseJson;
+        }
     }
 }
 
