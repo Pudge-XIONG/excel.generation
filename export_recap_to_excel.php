@@ -486,6 +486,7 @@ function getHolidays($year = null)
 function prepareEmail(){
     //Server settings
     $mail = new PHPMailer(true);                          // Passing `true` enables exceptions
+    $mail->CharSet = 'UTF-8';
     $mail->SMTPDebug = 2;                                 // Enable verbose debug output
     //$mail->isSMTP();                                      // Set mailer to use SMTP
     //$mail->Host = $GLOBALS['smtp_host'];  // Specify main and backup SMTP servers
