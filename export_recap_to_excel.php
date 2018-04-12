@@ -8,7 +8,7 @@
 // Otherwise, you can run the script without any parameter, for example : "php -f export_recap_to_excel.php"
 // in this case, the script with call the web service for getting data of the current month
 
-
+header("Content-Type:application/json");
 require 'vendor/autoload.php';
 
 // Import PHPMailer classes into the global namespace
@@ -18,24 +18,34 @@ use PHPMailer\PHPMailer\Exception;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-// firstly, read parameter from command line,
-analyse_parameters($argc, $argv);
 
-// set the request month and year to the current date
 $year = date("Y");
 $month = date("m");
 
-// if the specified month and year are given, then replace the current date by it
-if ($argc == 3) {
-    $year = $argv[1];
-    $month = $argv[2];
+$GLOBALS['RestAPI'] = false;
+//http get method
+if(!empty($_GET['year']) && !empty($_GET['month'])){
+    $GLOBALS['RestAPI'] = true;
+    $GLOBALS['year'] = $_GET['year'];
+    $GLOBALS['month'] = $_GET['month'];
+}
+// firstly, read parameter from command line,
+if(!$GLOBALS['RestAPI']){
+    analyse_parameters($argc, $argv);
+    // set the request month and year to the current date
+    // if the specified month and year are given, then replace the current date by it
+    if ($argc == 3) {
+        $year = $argv[1];
+        $month = $argv[2];
+    }
+
+    $GLOBALS['year'] = $year;
+    $GLOBALS['month'] = $month;
 }
 
-$GLOBALS['year'] = $year;
-$GLOBALS['month'] = $month;
 
 // Parse config file
-echo "loading configuration file...\n";
+//echo "loading configuration file...\n";
 $config_array = parse_ini_file("resources/config.ini");
 $webservice_endpoint = $config_array['webservice_endpoint'];
 $webservice_login = $config_array['webservice_login'];
@@ -59,13 +69,13 @@ $GLOBALS['mail_from_address'] = $config_array['mail_from_address'];
 $GLOBALS['mail_from_name'] = $config_array['mail_from_name'];
 $GLOBALS['mail_to'] = $config_array['mail_to'];
 
-echo "done!\n\n";
+//echo "done!\n\n";
 
 if($GLOBALS['send_email']){
     $GLOBALS['email'] = prepareEmail();
 }
 
-echo "loading tarif file...\n";
+//echo "loading tarif file...\n";
 $GLOBALS['tarifCSV'] = array_map('str_getcsv_with_semicolon', file($tarif_path));
 $GLOBALS['tarifArray'] = array();
 foreach($GLOBALS['tarifCSV'] as $tarifCSVLine){
@@ -81,9 +91,7 @@ foreach($GLOBALS['tarifCSV'] as $tarifCSVLine){
 
 //var_dump($GLOBALS['tarifArray']);
 //exit;
-echo "done!\n\n";
-
-
+//echo "done!\n\n";
 /*
 /////////////this part is just for generating a completed tarif csv file////////////////////
 $locationCSV = array();
@@ -115,21 +123,31 @@ file_put_contents('code.csv', $fileString);
 exit;
 ////////////////////////////////////////////////////////////////////////////////////////////
 */
-
-echo "calling web service $getcommands_url ...\n";
+if(!$GLOBALS['RestAPI']){
+    echo "calling web service $getcommands_url ...\n";
+}
 // get commands as json object
 $commandsBody = callWebAPI('GET', $getcommands_url, $webservice_login, $webservice_pwd, $headers);
 $commandsJson = json_decode($commandsBody, true);
-echo "done!\n\n";
+//echo "done!\n\n";
 
 // get all courses's id and numero 
 $coursesIdNumeroArray = getCourseIdNumeroArray($commandsJson);
 
 // get courses as json object
-echo "calling web service $getcourses_url ...\n";
+if(!$GLOBALS['RestAPI']){
+    echo "calling web service $getcourses_url ...\n";
+}
 $coursesBody = callWebAPI('GET', $getcourses_url, $webservice_login, $webservice_pwd, $headers);
 $coursesJson = json_decode($coursesBody, true);
-echo "done!\n\n";
+//echo "done!\n\n";
+
+//http get method
+if($GLOBALS['RestAPI']){
+    $coursesJsonStr = generateJsonData($coursesJson, $coursesIdNumeroArray);
+    response(200, $coursesJsonStr);   
+    exit;
+}
 
 // sort course by bupo 
 $bupoCoursesArray = array();
@@ -247,10 +265,7 @@ function sortCourseByBUPO(&$bupoCoursesArray, $coursesJson){
             $bupoCoursesArray[$BUPO] = $bupoCourses;
         }
         
-        // si l'etat de course est CONFIRMEE, on l'export.
-        if (strcasecmp('CONFIRMEE', $courseJson['etat']) == 0){
-            $bupoCoursesArray[$BUPO][$courseJson['id']] = $courseJson;
-        }
+        $bupoCoursesArray[$BUPO][$courseJson['id']] = $courseJson;
     }
 }
 
@@ -288,39 +303,27 @@ function generateExcelFiles($bupoCoursesArray, $coursesIdNumeroArray, $filePathP
 
     if($GLOBALS['send_email']){
         $GLOBALS['email']->send();
-        echo "Email sent...\n";
     }
 }
 
 
-/**
- * This function generate an excel file which contains all coures of the specified month with the save BUPO
- */
-function generateExcel($BUPO, $coursesJson, $coursesIdNumeroArray, $filePath){
-    
-    $spreadsheet = new Spreadsheet();
-    $sheet = $spreadsheet->getActiveSheet();
-    $sheet->setCellValue('A1', 'Date')->setCellValue('B1', 'Départ')
-            ->setCellValue('C1', 'Gare')->setCellValue('D1', 'Heure')
-            ->setCellValue('E1', 'Arrivée')->setCellValue('F1', 'Gare')
-            ->setCellValue('G1', 'BUPO')->setCellValue('H1', 'N° Bon')
-            ->setCellValue('I1', 'Attente')->setCellValue('J1', 'Commentaires sur la course')
-            ->setCellValue('K1', 'Tarif HT');
-    $number = 1;
 
+function generateJsonData($coursesJson, $coursesIdNumeroArray){
     // sort courses by date
     usort($coursesJson, function ($item1, $item2) {
         return $item1['dateRealisation']."-".$item1['heureDepart'] <=> $item2['dateRealisation']."-".$item2['heureDepart'];
     });
-
+    $number = 0;
+    $jsonData = array();
     foreach($coursesJson as $courseJson){
-        $numero = $number ++;
+        $courseArray = array();
         $dateStr = $courseJson['dateRealisation'];
         // change date format from yyyy-mm-dd to dd/mm/yyy
         $date = date("d/m/Y", strtotime($dateStr));
         $lieuDepart = $courseJson['lieuDepart'];
         $lieuArrivee = $courseJson['lieuArrivee'];
-
+        $BUPO = $courseJson['entiteCommanditaire']['libelle'];
+				
         // sometimes courses in response do not contain 'libelleLocalite' and 'libelleGM'
         // so we just set 'ville' as their value
         $depart = "";
@@ -355,13 +358,100 @@ function generateExcel($BUPO, $coursesJson, $coursesIdNumeroArray, $filePath){
         $dtime = DateTime::createFromFormat("Y-m-d", $dateRealisation);
         
         $timestamp = $dtime->getTimestamp();
-        $tarifHT = getTarif($lieuDepart, $lieuArrivee, $timestamp, $heure);
+        $etat = $courseJson['etat'];
+        $tarifHT = getTarif($lieuDepart, $lieuArrivee, $timestamp, $heure, $etat);
+        
+        $courseArray['date'] = $date;
+        $courseArray['depart'] = $depart;
+        $courseArray['gareDepart'] = $gareDepart;
+        $courseArray['heure'] = $heure;
+        $courseArray['arrivee'] = $arrivee;
+        $courseArray['gareArrivee'] = $gareArrivee;
+        $courseArray['BUPO'] = $BUPO;
+        $courseArray['numeroDeBon'] = $numeroDeBon;
+        //$courseArray['Attente'] = '';
+        //$courseArray['Commentaires sur la course'] = '';
+        $courseArray['tarifHT'] = $tarifHT;
+        $courseArray['etat'] = $etat;
+        
+        $jsonData[$number] = $courseArray;
+        $number ++;
+    }
 
+    return json_encode($jsonData);
+}
+
+
+/**
+ * This function generate an excel file which contains all coures of the specified month with the save BUPO
+ */
+function generateExcel($BUPO, $coursesJson, $coursesIdNumeroArray, $filePath){
+    
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setCellValue('A1', 'Date')->setCellValue('B1', 'Départ')
+            ->setCellValue('C1', 'Gare')->setCellValue('D1', 'Heure')
+            ->setCellValue('E1', 'Arrivée')->setCellValue('F1', 'Gare')
+            ->setCellValue('G1', 'BUPO')->setCellValue('H1', 'N° Bon')
+            ->setCellValue('I1', 'Attente')->setCellValue('J1', 'Commentaires sur la course')
+            ->setCellValue('K1', 'Tarif HT')->setCellValue('L1', 'Etat');
+    $number = 1;
+
+    // sort courses by date
+    usort($coursesJson, function ($item1, $item2) {
+        return $item1['dateRealisation']."-".$item1['heureDepart'] <=> $item2['dateRealisation']."-".$item2['heureDepart'];
+    });
+
+    foreach($coursesJson as $courseJson){
+        $numero = $number ++;
+        $dateStr = $courseJson['dateRealisation'];
+        // change date format from yyyy-mm-dd to dd/mm/yyy
+        $date = date("d/m/Y", strtotime($dateStr));
+        $lieuDepart = $courseJson['lieuDepart'];
+        $lieuArrivee = $courseJson['lieuArrivee'];
+				
+        // sometimes courses in response do not contain 'libelleLocalite' and 'libelleGM'
+        // so we just set 'ville' as their value
+        $depart = "";
+        if (array_key_exists("libelleLocalite", $lieuDepart)) {
+            $depart = $lieuDepart['libelleLocalite'];
+        } else{
+            $depart = $lieuDepart['ville'];
+        }
+        $gareDepart = "";
+        if (array_key_exists("libelleGM", $lieuDepart)) {
+            $gareDepart = $lieuDepart['libelleGM'];    
+        }
+
+        $heureStr = $courseJson['heureDepart'];
+        // change time string format from hhmm to hh:mm
+        $heure = substr_replace($heureStr, ':', 2, 0);
+
+        $arrivee = "";
+        if (array_key_exists("libelleLocalite", $lieuArrivee)) {
+            $arrivee = $lieuArrivee['libelleLocalite'];
+        } else{
+            $arrivee = $lieuArrivee['ville'];
+        }
+        $gareArrivee = "";
+        if (array_key_exists("libelleGM", $lieuArrivee)) {
+            $gareArrivee = $lieuArrivee['libelleGM'];    
+        }
+        $numeroDeBon = $coursesIdNumeroArray[$courseJson['id']];
+
+        $dateRealisation = $courseJson['dateRealisation'];
+        
+        $dtime = DateTime::createFromFormat("Y-m-d", $dateRealisation);
+        
+        $timestamp = $dtime->getTimestamp();
+        $etat = $courseJson['etat'];
+        $tarifHT = getTarif($lieuDepart, $lieuArrivee, $timestamp, $heure, $etat);
+				
         $sheet->setCellValue('A'.$number, $date)->setCellValue('B'.$number, $depart)
             ->setCellValue('C'.$number, $gareDepart)->setCellValue('D'.$number, $heure)
             ->setCellValue('E'.$number, $arrivee)->setCellValue('F'.$number, $gareArrivee)
             ->setCellValue('G'.$number, $BUPO)->setCellValue('H'.$number, $numeroDeBon)
-            ->setCellValue('K'.$number, $tarifHT);
+            ->setCellValue('K'.$number, $tarifHT)->setCellValue('L'.$number, $etat);
     }
 
     // set the formula for calculating the total price
@@ -380,37 +470,42 @@ function generateExcel($BUPO, $coursesJson, $coursesIdNumeroArray, $filePath){
  * The price of day and night and holidays is different, so we need to check if we need to get the 
  * normal price or not
  */
-function getTarif($lieuDepart, $lieuArrivee, $timestamp, $heure){
+function getTarif($lieuDepart, $lieuArrivee, $timestamp, $heure, $etat){
     // load tarif
     $courseTarif = 0.0;
-    $tarifArray = $GLOBALS['tarifArray'];
 
-    $departCode = $lieuDepart['ville'];
-    if(array_key_exists("codeGare", $lieuDepart)||array_key_exists("codeChantier", $lieuDepart)){
-        $departCode = $lieuDepart['codeGare'].".".$lieuDepart['codeChantier'];
-    }
-    $arriveeCode = $lieuArrivee['ville'];
-    if(array_key_exists("codeGare", $lieuArrivee)||array_key_exists("codeChantier", $lieuArrivee)){
-        $arriveeCode = $lieuArrivee['codeGare'].".".$lieuArrivee['codeChantier'];
-    }
+    if(strcasecmp('ANNULEE', $etat) != 0 && strcasecmp('MODIFICATION_POTENTIELLE', $etat) != 0){
+        // just get the price for courses with etat is neither ANNULEE nor MODIFICATION_POTENTIELLE
+        $tarifArray = $GLOBALS['tarifArray'];
 
-    foreach($tarifArray as $tarifLine){
-        if (strcasecmp($departCode, $tarifLine['Code Depart']) == 0
-            && strcasecmp($arriveeCode, $tarifLine['Code Arrivée']) == 0){
-
-            $dt = DateTime::createFromFormat("H:i", $heure);
-            $hours = $dt->format('H');
-            if($hours >= 19 || $hours < 7 || isHoliday($timestamp)){
-                // 19h -- 7h ou holiday
-                $courseTarif = $tarifLine['Prix Nuit'];
-            } else{
-                $courseTarif = $tarifLine['Prix jour'];
-            }
-            
+        $departCode = $lieuDepart['ville'];
+        if(array_key_exists("codeGare", $lieuDepart)||array_key_exists("codeChantier", $lieuDepart)){
+            $departCode = $lieuDepart['codeGare'].".".$lieuDepart['codeChantier'];
         }
-    }
+        $arriveeCode = $lieuArrivee['ville'];
+        if(array_key_exists("codeGare", $lieuArrivee)||array_key_exists("codeChantier", $lieuArrivee)){
+            $arriveeCode = $lieuArrivee['codeGare'].".".$lieuArrivee['codeChantier'];
+        }
 
-    $courseTarif = str_replace(',', '.', $courseTarif);
+        foreach($tarifArray as $tarifLine){
+            if (strcasecmp($departCode, $tarifLine['Code Depart']) == 0
+                && strcasecmp($arriveeCode, $tarifLine['Code Arrivée']) == 0){
+
+                $dt = DateTime::createFromFormat("H:i", $heure);
+                $hours = $dt->format('H');
+                if($hours >= 19 || $hours < 7 || isHoliday($timestamp)){
+                    // 19h -- 7h ou holiday
+                    $courseTarif = $tarifLine['Prix Nuit'];
+                } else{
+                    $courseTarif = $tarifLine['Prix jour'];
+                }
+                
+            }
+        }
+
+        $courseTarif = str_replace(',', '.', $courseTarif);
+    }
+    
     return floatval($courseTarif);
 }
 
@@ -486,8 +581,8 @@ function getHolidays($year = null)
 function prepareEmail(){
     //Server settings
     $mail = new PHPMailer(true);                          // Passing `true` enables exceptions
-    $mail->CharSet = 'UTF-8';
     $mail->SMTPDebug = 2;                                 // Enable verbose debug output
+    $mail->CharSet = 'UTF-8';
     //$mail->isSMTP();                                      // Set mailer to use SMTP
     //$mail->Host = $GLOBALS['smtp_host'];  // Specify main and backup SMTP servers
     //$mail->SMTPAuth = $GLOBALS['smtp_auth_enable'];       // Enable SMTP authentication
@@ -514,6 +609,16 @@ function prepareEmail(){
     //$mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
 
     return $mail;
+}
+
+
+/**
+ * This function send a http response to the browser with status code and json data
+ */
+function response($status, $coursesJsonStr){
+    header("HTTP/1.1 ".$status);
+
+    echo $coursesJsonStr;
 }
 
 ?>

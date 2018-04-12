@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" http-equiv="Content-Type" content="width=device-width, initial-scale=1, text/html, charset=UTF-8">
+        <link rel="stylesheet" href="css/styles.css">
+        <script src="js/jquery.js"></script>
+        <script type="text/javascript" src="js/jquery-ui.min.js"></script>
+        <link rel="stylesheet" type="text/css" media="screen" href="css/jquery-ui.css">
+    </head>
+    
+    <body>
+        <div class='title'>
+            <h1>
+                <span>Courses de </span>
+                <span id="dateSpan">2000-02</span>
+            </h1>
+        </div>
+
+        <div class='filterDiv'>
+            <label class="custom-select">
+                <select  name='options' id='etatSelect'>
+                    <option value="NON">Filtrer les courses par l'état</option>
+                    <option value="CONFIRMEE">CONFIRMEE</option>
+                    <option value="REGULARISEE">REGULARISEE</option>
+                    <option value="MODIFICATION_POTENTIELLE">MODIFICATION_POTENTIELLE</option>
+                    <option value="ANNULEE">ANNULEE</option>
+                </select>
+            </label>
+
+            <label for="filterDate">Date :</label>
+            <input name="filterDate" id="filterDate" class="date-picker" />
+
+        </div>
+
+        <br>
+        <div style="overflow-x:auto;">
+            <table id="coursesTable">
+                <tr>
+                    <th>Date</th>
+                    <th>Départ</th>
+                    <th>Gare</th>
+                    <th>Heure</th>
+                    <th>Arrivée</th>
+                    <th>Gare</th>
+                    <th>BUPO</th>
+                    <th>N° Bon</th>
+                    <th>Tarif HT</th>
+                    <th>Etat</th>
+                </tr>
+            </table>
+        </div>
+
+        <div id="loading" class="loading">
+                <img src="img/loading.gif" border=0>
+        </div>
+
+    </body>
+
+    <script type="text/javascript">
+        $(function() {
+            $('.date-picker').datepicker( {
+                changeMonth: true,
+                changeYear: true,
+                showButtonPanel: true,
+                dateFormat: 'yy-mm',
+                onClose: function(dateText, inst) {
+                    $(this).datepicker('setDate', new Date(inst.selectedYear, inst.selectedMonth, 1));
+                    fillTableByDate();
+                }
+            });
+            $('.date-picker').datepicker('setDate', new Date());
+            $('#etatSelect').change(function() {
+                filterTable();
+            });
+            fillTableByDate();
+        });
+
+    
+        function fillTableByDate(){
+            var date = $('#filterDate').val();
+            var preDate = $('#dateSpan').text();
+
+            if(date.valueOf() != preDate.valueOf()){
+                $('#dateSpan').text(date);
+
+                var year = date.substr(0,4);
+                var month = date.substr(5,2);
+
+                $("#coursesTable").find("tr:gt(0)").remove();
+                fillTable(year, month);
+            }
+        }
+
+
+        function filterTable(){
+            // filter table by etat
+            
+            var etat = $('#etatSelect').find(":selected").val();
+            if("NON" != etat.valueOf()){
+                $("#coursesTable").find("tr:gt(0)").hide();
+                $("#coursesTable tbody tr:contains('"+etat+"')").show();
+            } else{
+                $('tr').show();
+            }
+            
+        }
+
+        function fillTable(year, month){
+
+            $('#loading').css('display', 'block');
+            var restUrl = 'export_recap_to_excel.php?year=' + year + '&month=' + month;
+            
+            $.ajax({ 
+                type: "GET",
+                dataType: "json",
+                url: restUrl,
+                success: function(data,textStatus, jqXHR){
+                    //alert("textStatus : " + textStatus);
+                    $.each(data, function(index, courseJson) {
+                        $('#coursesTable').append([
+                            '<tr>',
+                                '<td>' + courseJson.date + '</td>',
+                                '<td>' + courseJson.depart + '</td>',
+                                '<td>' + courseJson.gareDepart + '</td>',
+                                '<td>' + courseJson.heure + '</td>',
+                                '<td>' + courseJson.arrivee + '</td>',
+                                '<td>' + courseJson.gareArrivee + '</td>',
+                                '<td>' + courseJson.BUPO + '</td>',
+                                '<td>' + courseJson.numeroDeBon + '</td>',
+                                '<td>' + courseJson.tarifHT + '</td>',
+                                '<td>' + courseJson.etat + '</td>',
+                            '</tr>'
+                            ].join(''));
+                    });
+                    //alert('done');
+                    $('#loading').css('display', 'none');
+                    filterTable();
+                }
+            });
+        }
+    </script>
+</html>

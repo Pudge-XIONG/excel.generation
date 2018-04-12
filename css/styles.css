@@ -1,0 +1,100 @@
+.title{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+}
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: 100%;
+    border: 1px solid #ddd;
+}
+
+th, td {
+    text-align: left;
+    padding: 8px;
+}
+
+tr:nth-child(even){background-color: #f2f2f2}
+
+.filterDiv{
+    justify-content: center;
+    text-align: center;
+}
+
+.filterDiv label, .filterDiv input {
+    float: none; /* if you had floats before? otherwise inline-block will behave differently */
+    display: inline-block;
+    vertical-align: middle;    
+}
+
+/* Select Wrapper (for befores & afters) */
+
+$select-color: #b6b6b6;
+.custom-select{
+  /* wrapper style */
+  position: relative;
+  display:block;
+  max-width: 400px;
+  min-width: 180px;
+  margin:0 auto;
+
+  select {
+    /* Select Reset */
+    border: 1px solid $select-color;
+    outline:none;
+    background: transparent;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0;
+    margin:0;
+    display:block;
+    width: 100%;
+    cursor: pointer;
+    
+    /* custom select appearance */  
+    padding: 12px 55px 15px 15px;
+    font-size: 14px;
+  }
+  /* the down arrow */
+  &:after{
+    position: absolute;
+    right:0; 
+    top:0;
+    width: 50px; 
+    height:100%;
+    line-height: 50px;
+    content: '\25BC';
+    text-align: center;
+    z-index:-1;
+    background: $select-color;
+    color:#fff;
+    font-size: 18px;
+  }
+}
+
+body { margin-top: 80px; }
+
+.ui-datepicker-calendar {
+    display: none;
+}
+
+#loading {
+    display:block;
+    position:absolute;
+    width:100%;
+    height: 100%;
+    justify-content: center;
+    text-align: center;
+    opacity : 0.5;
+}
+
+#loading img {
+    margin: auto;
+    top: 200;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
