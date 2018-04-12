@@ -30,6 +30,7 @@
             <label for="filterDate">Date :</label>
             <input name="filterDate" id="filterDate" class="date-picker" />
 
+            <input type="button" id="refreshButton" onclick="fillTableByDate(true);" value="Réactualiser ">
         </div>
 
         <br>
@@ -57,6 +58,7 @@
     </body>
 
     <script type="text/javascript">
+        var courses = null;
         $(function() {
             $('.date-picker').datepicker( {
                 changeMonth: true,
@@ -74,13 +76,12 @@
             });
             fillTableByDate();
         });
-
     
-        function fillTableByDate(){
+        function fillTableByDate(force=false){
             var date = $('#filterDate').val();
             var preDate = $('#dateSpan').text();
 
-            if(date.valueOf() != preDate.valueOf()){
+            if(force || (date.valueOf() != preDate.valueOf())){
                 $('#dateSpan').text(date);
 
                 var year = date.substr(0,4);
@@ -96,12 +97,17 @@
             // filter table by etat
             
             var etat = $('#etatSelect').find(":selected").val();
-            if("NON" != etat.valueOf()){
-                $("#coursesTable").find("tr:gt(0)").hide();
-                $("#coursesTable tbody tr:contains('"+etat+"')").show();
-            } else{
-                $('tr').show();
-            }
+            
+            $("#coursesTable").find("tr:gt(0)").remove();
+            
+            $.each(courses, function(index, courseJson) {
+                //alert(courseJson.etat);
+                //alert("etat = " + etat);
+                if((courseJson.etat.valueOf() == etat.valueOf()) || etat.valueOf() == "NON"){
+                    //alert("append tr");
+                    appendTr(courseJson);
+                }
+            });
             
         }
 
@@ -110,33 +116,42 @@
             $('#loading').css('display', 'block');
             var restUrl = 'export_recap_to_excel.php?year=' + year + '&month=' + month;
             
+            $('#etatSelect').attr('disabled', true);
+            $('#filterDate').attr('disabled', true);
+            $('#refreshButton').attr('disabled', true);
             $.ajax({ 
                 type: "GET",
                 dataType: "json",
                 url: restUrl,
                 success: function(data,textStatus, jqXHR){
                     //alert("textStatus : " + textStatus);
-                    $.each(data, function(index, courseJson) {
-                        $('#coursesTable').append([
-                            '<tr>',
-                                '<td>' + courseJson.date + '</td>',
-                                '<td>' + courseJson.depart + '</td>',
-                                '<td>' + courseJson.gareDepart + '</td>',
-                                '<td>' + courseJson.heure + '</td>',
-                                '<td>' + courseJson.arrivee + '</td>',
-                                '<td>' + courseJson.gareArrivee + '</td>',
-                                '<td>' + courseJson.BUPO + '</td>',
-                                '<td>' + courseJson.numeroDeBon + '</td>',
-                                '<td>' + courseJson.tarifHT + '</td>',
-                                '<td>' + courseJson.etat + '</td>',
-                            '</tr>'
-                            ].join(''));
-                    });
+                    courses = data;
                     //alert('done');
                     $('#loading').css('display', 'none');
                     filterTable();
+                    $('#etatSelect').removeAttr("disabled");
+                    $('#filterDate').removeAttr("disabled");
+                    $('#refreshButton').removeAttr("disabled");
                 }
             });
+        }
+
+
+        function appendTr(courseJson){
+            $('#coursesTable').append([
+                '<tr>',
+                    '<td>' + courseJson.date + '</td>',
+                    '<td>' + courseJson.depart + '</td>',
+                    '<td>' + courseJson.gareDepart + '</td>',
+                    '<td>' + courseJson.heure + '</td>',
+                    '<td>' + courseJson.arrivee + '</td>',
+                    '<td>' + courseJson.gareArrivee + '</td>',
+                    '<td>' + courseJson.BUPO + '</td>',
+                    '<td>' + courseJson.numeroDeBon + '</td>',
+                    '<td>' + courseJson.tarifHT + '</td>',
+                    '<td>' + courseJson.etat + '</td>',
+                '</tr>'
+                ].join(''));
         }
     </script>
 </html>
