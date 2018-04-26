@@ -310,9 +310,12 @@ function generateExcelFiles($bupoCoursesArray, $coursesIdNumeroArray, $filePathP
 
 function generateJsonData($coursesJson, $coursesIdNumeroArray){
     // sort courses by date
+    /*
     usort($coursesJson, function ($item1, $item2) {
         return $item1['dateRealisation']."-".$item1['heureDepart'] <=> $item2['dateRealisation']."-".$item2['heureDepart'];
     });
+    */
+    $coursesJson = sortArray( $coursesJson, array( 'dateRealisation', 'heureDepart' ) );
     $number = 0;
     $jsonData = array();
     foreach($coursesJson as $courseJson){
@@ -398,9 +401,12 @@ function generateExcel($BUPO, $coursesJson, $coursesIdNumeroArray, $filePath){
     $number = 1;
 
     // sort courses by date
+    /*
     usort($coursesJson, function ($item1, $item2) {
         return $item1['dateRealisation']."-".$item1['heureDepart'] <=> $item2['dateRealisation']."-".$item2['heureDepart'];
     });
+    */
+    $coursesJson = sortArray( $coursesJson, array( 'dateRealisation', 'heureDepart' ) );
 
     foreach($coursesJson as $courseJson){
         $numero = $number ++;
@@ -619,6 +625,28 @@ function response($status, $coursesJsonStr){
     header("HTTP/1.1 ".$status);
 
     echo $coursesJsonStr;
+}
+
+
+/**
+ * Sorting array of associative arrays - multiple row sorting using a closure.
+ * See also: http://the-art-of-web.com/php/sortarray/
+ *
+ * @param array $data input-array
+ * @param string|array $fields array-keys
+ * @license Public Domain
+ * @return array
+ */
+function sortArray( $data, $field ) {
+    $field = (array) $field;
+    uasort( $data, function($a, $b) use($field) {
+        $retval = 0;
+        foreach( $field as $fieldname ) {
+            if( $retval == 0 ) $retval = strnatcmp( $a[$fieldname], $b[$fieldname] );
+        }
+        return $retval;
+    } );
+    return $data;
 }
 
 ?>
