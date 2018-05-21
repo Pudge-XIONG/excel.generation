@@ -354,7 +354,10 @@ function generateJsonData($coursesJson, $coursesIdNumeroArray){
         if (array_key_exists("libelleGM", $lieuArrivee)) {
             $gareArrivee = $lieuArrivee['libelleGM'];    
         }
-        $numeroDeBon = $coursesIdNumeroArray[$courseJson['id']];
+        $numeroDeBon = '';
+        if (array_key_exists($courseJson['id'], $coursesIdNumeroArray)) {
+            $numeroDeBon = $coursesIdNumeroArray[$courseJson['id']];
+        }
 
         $dateRealisation = $courseJson['dateRealisation'];
         
@@ -443,7 +446,11 @@ function generateExcel($BUPO, $coursesJson, $coursesIdNumeroArray, $filePath){
         if (array_key_exists("libelleGM", $lieuArrivee)) {
             $gareArrivee = $lieuArrivee['libelleGM'];    
         }
-        $numeroDeBon = $coursesIdNumeroArray[$courseJson['id']];
+
+        $numeroDeBon = '';
+        if (array_key_exists($courseJson['id'], $coursesIdNumeroArray)) {
+            $numeroDeBon = $coursesIdNumeroArray[$courseJson['id']];
+        }
 
         $dateRealisation = $courseJson['dateRealisation'];
         
