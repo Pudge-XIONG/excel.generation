@@ -507,7 +507,7 @@ function getTarif($lieuDepart, $lieuArrivee, $timestamp, $heure, $etat){
                 $dt = DateTime::createFromFormat("H:i", $heure);
                 $hours = $dt->format('H');
                 if($hours >= 19 || $hours < 7 || isHoliday($timestamp)){
-                    // 19h -- 7h ou holiday
+                    // 19h -- 7h ou holiday ou dimanche
                     $courseTarif = $tarifLine['Prix Nuit'];
                 } else{
                     $courseTarif = $tarifLine['Prix jour'];
@@ -541,7 +541,7 @@ function isHoliday($timestamp)
                 return strftime('%Y-%m-%d', $value);
         }, $aHolidays);
 
-        if (in_array(strftime('%Y-%m-%d', $timestamp), $aHolidaysString) OR $iDayNum == 6 OR $iDayNum == 7)
+        if (in_array(strftime('%Y-%m-%d', $timestamp), $aHolidaysString) OR $iDayNum == 7)
         {
                 return true;
         }
