@@ -18,6 +18,14 @@ use PHPMailer\PHPMailer\Exception;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
+// Tell log4php to use our configuration file.
+Logger::configure('resources/log4php.xml');
+ 
+// Fetch a logger, it will inherit settings from the root logger
+$GLOBALS['logger'] = Logger::getLogger('myLogger');
+
+$GLOBALS['body_code_seperator'] = '**-**';
+
 // Parse config file
 //echo "loading configuration file...\n";
 $config_array = parse_ini_file("resources/config.ini");
@@ -35,14 +43,19 @@ if(!empty($_GET['update']) && $_GET['update'] == 'true'){
     $courseUpdateBody = cleanJsonStr(file_get_contents('php://input'));
     
     $updateResponse = callWebAPI('POST', $updatecourse_url, $webservice_login, $webservice_pwd, $headers, $courseUpdateBody);
-    if (strpos($updateResponse, '400') !== false) {
-        response(400, $updateResponse);
+    $responseArray = explode($GLOBALS['body_code_seperator'], $updateResponse);
+    $responseBody = $responseArray[0];
+    $responseCode = $responseArray[1];
+    if ($responseCode !='201') {
+        $GLOBALS['logger']->error('failed to confirm course '.'\n');
+        response($responseCode, $responseBody);
     } else{
-        response(201, $updateResponse);
+        response(201, $responseBody);
     }
     exit;
 } else if(!empty($_GET['update'])){
     response(400, 'bad request : update should be true');
+    $GLOBALS['logger']->error("bad request : update should be true");
     exit;
 }
 
@@ -150,9 +163,16 @@ exit;
 
 // get courses as json object
 if(!$GLOBALS['RestAPI']){
-    echo "calling web service $getcourses_url ...\n";
+    $GLOBALS['logger']->info("calling web service $getcourses_url ...\n");
 }
-$coursesBody = callWebAPI('GET', $getcourses_url, $webservice_login, $webservice_pwd, $headers);
+//$coursesBody = callWebAPI('GET', $getcourses_url, $webservice_login, $webservice_pwd, $headers);
+
+
+$responseBodyAndCode = callWebAPI('GET', $getcourses_url, $webservice_login, $webservice_pwd, $headers);
+$responseArray = explode($GLOBALS['body_code_seperator'], $responseBodyAndCode);
+$coursesBody = $responseArray[0];
+$responseCode = $responseArray[1];
+
 
 $coursesBody = cleanJsonStr($coursesBody);
 
@@ -160,29 +180,30 @@ $coursesJson = json_decode($coursesBody, true);
 
 switch (json_last_error()) {
     case JSON_ERROR_NONE:
-        //echo ' - No Errors';
+        // ' - No Errors';
     break;
     case JSON_ERROR_DEPTH:
-        echo ' - Maximum stack depth exceeded';
+        $GLOBALS['logger']->error(' - Maximum stack depth exceeded');
     break;
     case JSON_ERROR_STATE_MISMATCH:
-        echo ' - Underflow or the modes mismatch';
+        $GLOBALS['logger']->error(' - Underflow or the modes mismatch');
     break;
     case JSON_ERROR_CTRL_CHAR:
-        echo ' - Unexpected control character found';
+        $GLOBALS['logger']->error(' - Unexpected control character found');
     break;
     case JSON_ERROR_SYNTAX:
-        echo ' - Syntax error, malformed JSON';
+        $GLOBALS['logger']->error(' - Syntax error, malformed JSON');
     break;
     case JSON_ERROR_UTF8:
-        echo ' - Malformed UTF-8 characters, possibly incorrectly encoded';
+        $GLOBALS['logger']->error(' - Malformed UTF-8 characters, possibly incorrectly encoded');
     break;
     default:
-        echo ' - Unknown error';
+        $GLOBALS['logger']->error(' - Unknown error');
     break;
 }
 
 if($coursesJson === null){
+    $GLOBALS['logger']->error('Pas de courses, on quit le script');
     exit;
 }
 
@@ -199,13 +220,13 @@ $bupoCoursesArray = array();
 sortCourseByBUPO($bupoCoursesArray, $coursesJson);
 
 // we begin to generate excel file from this part
-echo "generating excel files\n";
+$GLOBALS['logger']->info("generation des fichiers Excel...");
 
 $filePathPrefix = $excel_folder.DIRECTORY_SEPARATOR.$excel_file_prefix.$year."_".$month;
 
 generateExcelFiles($bupoCoursesArray, $filePathPrefix);
 
-echo "done!\n\n";
+$GLOBALS['logger']->info("generation des fichiers Excel reussi");
 
 // end of the script. 
 // below are the declaration of functions
@@ -228,19 +249,19 @@ function analyse_parameters($argc, $argv){
     // 1 for running the script without parameter and 3 for 2 parameters as the script's filename is always the first parameter
     if($argc !=1 && $argc != 3){
         // parameter error, stop the script
-        echo "Wrong paramters, please run the script as the following :\n\tphp export ".$argv[0]." [yyyy] [mm]\n";
+        $GLOBALS['logger']->error("Wrong paramters, please run the script as the following :\tphp export ".$argv[0]." [yyyy] [mm]");
         exit;
     } else if($argc == 3){
         // 2 parameters, we need to check if the parameters follow the right format 
         $year = (int)$argv[1];
         $month = (int)$argv[2];
         if($year > 9999 || $year < 1000){
-            echo "Year should between 1000 ~ 9999\n";
+            $GLOBALS['logger']->error("Year should between 1000 ~ 9999");
             exit;
         }
 
         if($month > 12 || $month < 1){
-            echo "Month should between 1 ~ 12\n";
+            $GLOBALS['logger']->error("Month should between 1 ~ 12");
             exit;
         }
     }
@@ -277,17 +298,20 @@ function callWebAPI($method, $url, $login, $pwd, $headers, $data = false){
     curl_setopt($curl, CURLOPT_URL, $url);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 
+    $GLOBALS['logger']->info($method.' '.$url.'...');
     $result = curl_exec($curl);
     if($result === false)
     {
-        echo 'Curl error: ' . curl_error($curl);
+        $GLOBALS['logger']->error('Curl error: ' . curl_error($curl)." with data :".$data);
         exit;
     }
     $body = "";
     $returnCode = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
     $header_size = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
-    if($returnCode != 200 && $returnCode != 429 && $returnCode != 201){
-        //echo "Bad response : " . $returnCode . " : " .curl_error($curl);
+    $GLOBALS['logger']->info('http response code is '.$returnCode);
+
+    if($returnCode != 200 && $returnCode != 201){
+        $GLOBALS['logger']->error("Bad response : " . $returnCode . " : " .curl_error($curl));
     }
 
     curl_close($curl);
@@ -296,15 +320,21 @@ function callWebAPI($method, $url, $login, $pwd, $headers, $data = false){
     $header = substr($result, 0, $header_size);
     $body = substr($result, $header_size);
 
+    if($returnCode != 200 && $returnCode != 201){
+        $GLOBALS['logger']->error("body is : " . $body);
+    }
+
     if($method == "GET"){
         if($returnCode == 200){
+            $GLOBALS['logger']->info("les courses ont ete bien recuperees depuis le web service V2");
             file_put_contents('temp_coursesBody.txt', $body);
         } else{
+            $GLOBALS['logger']->warn("probleme lors de la recuperation des courses depuis le web service V2, on prend les dernieres courses depuis le fichier temporaire...");
             $body = file_get_contents('temp_coursesBody.txt'); 
         }
     }
     
-    return $body;
+    return $body.$GLOBALS['body_code_seperator'].$returnCode;
 }
 
 
@@ -525,7 +555,7 @@ function generateExcel($BUPO, $coursesJson, $filePath){
 
     $writer = new Xlsx($spreadsheet);
     $writer->save($filePath);
-    echo "saved to ".$filePath."\n";
+    $GLOBALS['logger']->info("saved to ".$filePath);
 }
 
 

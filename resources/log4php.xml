@@ -1,9 +1,13 @@
 <configuration xmlns="http://logging.apache.org/log4php/">
-    <appender name="myAppender" class="LoggerAppenderFile">
-        <param name="file" value="galapagos.log" />
+    <appender name="default" class="LoggerAppenderDailyFile">
+        <layout class="LoggerLayoutPattern">
+            <param name="conversionPattern" value="%date %-5level - %message%newline" />
+        </layout>
+        <param name="file" value="logs/galapagos-%s.log" />
+        <param name="datePattern" value="Y-m-d" />
     </appender>
     <root>
         <level value="INFO" />
-        <appender_ref ref="myAppender" />
+        <appender_ref ref="default" />
     </root>
 </configuration>
