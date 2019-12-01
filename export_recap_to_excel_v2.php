@@ -109,7 +109,9 @@ $GLOBALS['mail_to'] = $config_array['mail_to'];
 //echo "done!\n\n";
 
 if($GLOBALS['send_email']){
+    $GLOBALS['logger']->info("preparation de PHPMailer");
     $GLOBALS['email'] = prepareEmail();
+    $GLOBALS['logger']->info("PHPMailer ready!");
 }
 
 //echo "loading tarif file...\n";
@@ -368,7 +370,9 @@ function generateExcelFiles($bupoCoursesArray, $filePathPrefix){
     }
 
     if($GLOBALS['send_email']){
+        $GLOBALS['logger']->info("Sending email...");
         $GLOBALS['email']->send();
+        $GLOBALS['logger']->info("Email sent!");
     }
 }
 
@@ -703,6 +707,7 @@ function prepareEmail(){
     $mail->Subject = 'Recap de '.$GLOBALS['month'].'/'.$GLOBALS['year'];
     $mail->Body    = 'Voici les fichiers excel de '.$GLOBALS['month'].'/'.$GLOBALS['year']." ci-joint dans ce mail.\n";
     //$mail->AltBody = 'This is the body in plain text for non-HTML mail clients';
+
 
     return $mail;
 }
