@@ -345,7 +345,9 @@ function callWebAPI($method, $url, $login, $pwd, $headers, $data = false){
  */
 function sortCourseByBUPO(&$bupoCoursesArray, $coursesJson){
     foreach($coursesJson as $courseJson){
-        $BUPO = $courseJson['entiteCommanditaire']['libelle'];
+        $courseJson['CODEBUPO'] = $courseJson['entiteFacture']['codeBupo'];
+        $BUPO = $courseJson['CODEBUPO'].'-'.$courseJson['entiteCommanditaire']['libelle'];
+        //$BUPO = $courseJson['entiteCommanditaire']['libelle'];
         if (!array_key_exists($BUPO, $bupoCoursesArray)) {
             // new bupo, then creat a new array and add the course
             $bupoCourses = array();
@@ -393,11 +395,12 @@ function generateJsonData($coursesJson){
     $temp_courses = array();
     $temp_num = 0;
     foreach($coursesJson as $courseJson){
-        $courseJson['BUPO'] = $courseJson['entiteCommanditaire']['libelle'];
+        $courseJson['CODEBUPO'] = $courseJson['entiteFacture']['codeBupo'];
+        $courseJson['BUPO'] = $courseJson['CODEBUPO'].'-'.$courseJson['entiteCommanditaire']['libelle'];
         $temp_courses[$temp_num] = $courseJson;
         $temp_num ++;
     }
-    $temp_courses = sortArray( $temp_courses, array('BUPO', 'dateRealisation') );
+    $temp_courses = sortArray( $temp_courses, array('CODEBUPO', 'dateRealisation') );
 
     foreach($temp_courses as $courseJson){
         $courseArray = array();
@@ -490,7 +493,7 @@ function generateJsonData($coursesJson){
 
 
 /**
- * This function generate an excel file which contains all coures of the specified month with the save BUPO
+ * This function generate an excel file which contains all coures of the specified month with the same BUPO
  */
 function generateExcel($BUPO, $coursesJson, $filePath){
     
@@ -510,7 +513,7 @@ function generateExcel($BUPO, $coursesJson, $filePath){
         return $item1['dateRealisation']."-".$item1['heureDepart'] <=> $item2['dateRealisation']."-".$item2['heureDepart'];
     });
     */
-    $coursesJson = sortArray( $coursesJson, array( 'dateRealisation', 'heureDepart' ) );
+    $coursesJson = sortArray( $coursesJson, array( 'CODEBUPO', 'heureDepart' ) );
 
     foreach($coursesJson as $courseJson){
         $numero = $number ++;
