@@ -387,29 +387,18 @@ function generateJsonData($coursesJson){
         return $item1['dateRealisation']."-".$item1['heureDepart'] <=> $item2['dateRealisation']."-".$item2['heureDepart'];
     });
     */
-    //$coursesJson = sortArray( $coursesJson, array( 'dateRealisation', 'heureDepart' ) );
+    $coursesJson = sortArray( $coursesJson, array( 'dateRealisation', 'heureDepart' ) );
     $number = 0;
     $jsonData = array();
 
-    //sort courses by BUPO
-    $temp_courses = array();
-    $temp_num = 0;
     foreach($coursesJson as $courseJson){
-        $courseJson['CODEBUPO'] = $courseJson['entiteFacture']['codeBupo'];
-        $courseJson['BUPO'] = $courseJson['CODEBUPO'].'-'.$courseJson['entiteCommanditaire']['libelle'];
-        $temp_courses[$temp_num] = $courseJson;
-        $temp_num ++;
-    }
-    $temp_courses = sortArray( $temp_courses, array('CODEBUPO', 'dateRealisation') );
-
-    foreach($temp_courses as $courseJson){
         $courseArray = array();
         $dateStr = $courseJson['dateRealisation'];
         // change date format from yyyy-mm-dd to dd/mm/yyy
         $date = date("d/m/Y", strtotime($dateStr));
         $lieuDepart = $courseJson['lieuDepart'];
         $lieuArrivee = $courseJson['lieuArrivee'];
-        $BUPO = $courseJson['BUPO'];
+        $BUPO = $courseJson['entiteCommanditaire']['libelle'];
         $idCourse = $courseJson['id'];
 				
         // sometimes courses in response do not contain 'libelleLocalite' and 'libelleGM'
